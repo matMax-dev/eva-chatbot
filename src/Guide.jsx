@@ -33,19 +33,41 @@ function Check({index}) {
  const [question,options,correct,explanation]=questions[index];
  return <div className="knowledge-check"><span className="eyebrow">UNA PAUSA PARA PENSAR</span><h3>{question}</h3><div className="answer-options">{options.map((option,i)=><button key={option} aria-pressed={answer===i} className={answer===i?'chosen':''} onClick={()=>setAnswer(i)}>{option}</button>)}</div>{answer!==null&&<p role="status" className="answer-feedback">{answer===correct?'¡Exacto!':'Inténtalo de nuevo.'} {answer===correct?explanation:'Vuelve a mirar la explicación de este paso.'}</p>}</div>
 }
-export function GuidedApp({lessons,Content,Badge}) {
+export function GuidedApp({lessons,Content,Badge,onComplete,completed=[]}) {
  const [route,setRoute]=useState(readRoute);
- const [menu,setMenu]=useState(false);
+
  const [selectedFormula,setSelectedFormula]=useState('');
  const focusRef=useRef(null);
+ const previousLesson=useRef(route.lesson);
+ const initialView=useRef(true);
  const index=route.lesson;
  const pages=React.Children.toArray(Content({index}).props.children);
  const step=Math.min(route.step,pages.length-1);
  const last=step===pages.length-1;
  const formulaOptions=pages.flatMap(collectFormulas);
- useEffect(()=>{const sync=()=>{if(location.hash==='#lesson-content')return;setRoute(readRoute());setMenu(false);setSelectedFormula('')};window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync)},[]);
- useEffect(()=>{window.scrollTo(0,0);focusRef.current?.focus({preventScroll:true})},[index,step]);
- function go(lesson,next){setSelectedFormula('');setMenu(false);location.hash=`${lesson+1}/${next+1}`;}
+ useEffect(()=>{const sync=()=>{if(location.hash==='#lesson-content')return;setRoute(readRoute());setSelectedFormula('')};window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync)},[]);
+ useEffect(()=>{if(initialView.current||previousLesson.current!==index){window.scrollTo(0,0)}else{document.querySelector(".detail-workbench")?.scrollIntoView({block:"start"})}initialView.current=false;previousLesson.current=index;focusRef.current?.focus({preventScroll:true})},[index,step]);
+ function go(lesson,next){setSelectedFormula('');location.hash=`${lesson+1}/${next+1}`;}
  function jump(target){const next=pages.findIndex(page=>containsFormula(page,target));if(next<0)return;history.pushState(null,'',`#${index+1}/${next+1}`);setRoute({lesson:index,step:next});setSelectedFormula(target);}
- return <><a className="skip" href="#lesson-content">Saltar al contenido</a><aside className={`sidebar ${menu?'open':''}`}><a href="#1/1" className="brand"><span className="brand-icon">E</span><div>EVA <span>Lab</span><small>APRENDE POWER APPS</small></div></a><div className="sidebar-label">ELIGE TU LECCIÓN</div><nav aria-label="Lecciones">{lessons.map((lesson,i)=><a key={lesson[0]} href={`#${i+1}/1`} onClick={()=>setMenu(false)} className={i===index?'active':''} aria-current={i===index?'page':undefined}><span className="nav-number">0{i+1}</span><span>{lesson[0]}</span></a>)}</nav><div className="sidebar-bottom"><span className="mini-mark">✦</span><strong>Una idea a la vez.</strong><p>Explora, prueba y avanza a tu ritmo.</p><div>06 lecciones · Guía de clase</div></div></aside><div className="workspace"><header className="topbar"><button className="menu-toggle" onClick={()=>setMenu(!menu)} aria-label="Mostrar lecciones" aria-expanded={menu}>☰</button><span>Tu espacio para aprender <span className="crumb">/</span><strong>Power Apps</strong></span><span className="top-tag">MODO PASO A PASO</span></header><main id="lesson-content"><div className="lesson-meta"><span className="eyebrow">LECCIÓN 0{index+1} / 06</span><Badge level={index===3?2:[0,2,5].includes(index)?1:0}/></div><h1>{lessons[index][0]}</h1><p className="lead">{lessons[index][1]}</p><div className="journey"><div className="journey-top"><span>Paso {step+1} de {pages.length}</span><label><span className="sr-only">Ir a una fórmula</span><select aria-label="Ir a una fórmula" value="" onChange={e=>jump(e.target.value)}><option value="" disabled>Buscar una propiedad ↗</option>{formulaOptions.map(f=><option key={f} value={f}>{f}</option>)}</select></label></div><div className="step-track" aria-label="Pasos de la lección">{pages.map((_,i)=><button key={i} className={i===step?'current':i<step?'earlier':''} aria-label={`Paso ${i+1}: ${titles[index][i]}`} aria-current={i===step?'step':undefined} onClick={()=>go(index,i)} title={titles[index][i]}/>)}</div></div><article className="learning-stage" key={`${index}-${step}`}><div className="stage-header"><span className="step-index">{String(step+1).padStart(2,'0')}</span><h2 ref={focusRef} tabIndex="-1">{titles[index][step]}</h2></div><FormulaContext.Provider value={selectedFormula}><div className="step-body">{pages[step]}</div></FormulaContext.Provider>{last&&<Check index={index}/>}</article><div className="step-controls"><button className="back-button" disabled={index===0&&step===0} onClick={()=>step?go(index,step-1):go(index-1,titles[index-1].length-1)}>← Anterior</button><span>{last?'Llegaste al final de esta lección':'Sin prisa. Tú marcas el ritmo.'}</span><button className="primary" onClick={()=>last?go(index<5?index+1:0,0):go(index,step+1)}>{last?(index===5?'Volver al inicio ↗':'Siguiente lección →'):'Continuar →'}</button></div><footer className="page-foot"><span>EVA LAB / Aprende construyendo</span><span>Fórmulas originales · Power Fx</span></footer></main></div></>;
+ const categories=['Fundamentos de conversación','Diseño de la conversación','Interacción del usuario','Lógica de respuestas','Estados de la conversación','Opciones y cierre'];
+ function advance(){if(last){onComplete(index);if(index===5)location.hash='lecciones';else go(index+1,0)}else go(index,step+1)}
+ return <main id="lesson-content" className="lesson-detail">
+  <div className="detail-topline"><a href="#lecciones">← Volver a Lecciones</a><div><span className="detail-time">◷ LECCIÓN 0{index+1} · {[5,7,5,6,4,5][index]} MIN</span><Badge level={index===3?2:[0,2,5].includes(index)?1:0}/></div></div>
+  <header className="detail-heading"><p className="detail-category"><strong>0{index+1}</strong><span>/</span>{categories[index]}</p><h1>{lessons[index][0]}</h1><p className="detail-description">{lessons[index][2]}</p></header>
+  <p className="lesson-index-label">CONTENIDO DE ESTA LECCIÓN <span>Selecciona un paso para ir directamente</span></p><nav className="detail-steps" aria-label="Pasos de la lección">{pages.map((_,i)=><button key={i} className={i===step?'current':''} aria-current={i===step?'step':undefined} aria-label={`Paso ${i+1}: ${titles[index][i]}`} onClick={()=>go(index,i)}><span className="detail-step-number">{i+1}</span><span><small>PASO {i+1}</small><span>{titles[index][i]}</span></span></button>)}</nav>
+  <div className="detail-tools"><span>Usa los botones al final para avanzar.</span><label><span className="sr-only">Ir a una fórmula</span><select aria-label="Ir a una fórmula" value="" onChange={e=>jump(e.target.value)}><option value="" disabled>Buscar una propiedad ↗</option>{formulaOptions.map(f=><option key={f} value={f}>{f}</option>)}</select></label></div>
+  <div className="detail-workbench">
+   <article className="detail-panel">
+    <div className="detail-panel-bar"><span className="detail-step-pill">PASO {step+1} DE {pages.length}</span><strong>{titles[index][step]}</strong><div className="detail-dots" aria-hidden="true">{pages.map((_,i)=><span key={i} className={i===step?'active':''}/>)}</div></div>
+    <div className="detail-panel-content" key={`${index}-${step}`}>
+     <div className="detail-content-heading"><span className="detail-content-icon" aria-hidden="true">{String(step+1).padStart(2,'0')}</span><div><span className="eyebrow">{lessons[index][1]}</span><h2 ref={focusRef} tabIndex="-1">{titles[index][step]}</h2></div><span className="detail-studio">Power Apps Studio</span></div>
+     <FormulaContext.Provider value={selectedFormula}><div className="step-body">{pages[step]}</div></FormulaContext.Provider>
+     {last&&<Check index={index}/>}
+    </div>
+    <div className="detail-controls"><button className="detail-back" onClick={()=>step?go(index,step-1):location.hash='lecciones'}>← {step?'Paso anterior':'Volver a Lecciones'}</button><span>Tu progreso: <strong>Paso {step+1} de {pages.length}</strong></span><button className="primary" onClick={advance}>{last?(index===5?'Completar curso ✓':'Completar lección y seguir →'):`Paso ${step+2}: ${titles[index][step+1]} →`}</button></div>
+   </article>
+  </div>
+  <section className="detail-lesson-footer" aria-label="Navegación entre lecciones"><span className="detail-footer-icon" aria-hidden="true">{completed.includes(index)?'✓':'◎'}</span><div><strong>Lección 0{index+1} de 06</strong><p>{completed.includes(index)?'Lección completada · Puedes repasar cada paso.':`${completed.length} de 6 lecciones completadas · Avanza a tu ritmo.`}</p></div><a href="#lecciones">Volver al índice</a>{index<5?<a className="detail-next-lesson" href={`#${index+2}/1`}>Ir directo a Lección 0{index+2} →</a>:<a className="detail-next-lesson" href="#recursos">Explorar recursos →</a>}</section>
+ </main>;
 }
+
