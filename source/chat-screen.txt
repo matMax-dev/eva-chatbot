@@ -1,0 +1,351 @@
+Screens:
+  chat:
+    Properties:
+      LoadingSpinnerColor: =RGBA(56, 96, 178, 1)
+      OnVisible: |-
+        =ClearCollect(
+            colConversacion,
+            {Mensaje: "¡Hola! Soy EVA. ¿En qué te puedo ayudar?", Emisor: "Bot"}
+        );
+        ClearCollect(
+            colOpcionesRapidas,
+            {Texto: "¿Qué es TOEIC?"},
+            {Texto: "¿Cómo mejorar mi Speaking?"},
+            {Texto: "¿Cómo mejorar mi Writing?"},
+            {Texto: "¿Cómo puedo prepararme para TOEIC?"}
+        );
+        Set(varMostrarOpciones, true);
+
+        ClearCollect(
+            colRespuestasBot,
+            ShowColumns(
+                respuestasBot,
+                Title,
+                PalabrasClave,
+                Respuesta,
+                Orden
+            )
+        )
+    Children:
+      - galOpcionesRapidas:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Height: =102
+            Items: =colOpcionesRapidas
+            Visible: =varMostrarOpciones
+            Y: =947
+          Children:
+            - btn_choices:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorFade(Self.Fill, -15%)
+                  Color: =RGBA(0, 0, 0, 1)
+                  DisabledBorderColor: =RGBA(166, 166, 166, 1)
+                  Fill: =RGBA(157, 200, 141, 1)
+                  Font: =Font.'Open Sans'
+                  Height: =71
+                  HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+                  HoverColor: =RGBA(255, 255, 255, 1)
+                  HoverFill: =ColorFade(RGBA(157, 200, 141, 1), -20%)
+                  OnSelect: |-
+                    =// 1. Agrega el mensaje como si el usuario lo hubiera escrito
+                    Collect(
+                        colConversacion,
+                        {Mensaje: ThisItem.Texto, Emisor: "Usuario"}
+                    );
+
+                    // 2. Busca coincidencia (misma lógica que ya tienes)
+                    Set(
+                        varRespuesta,
+                        First(
+                            Sort(
+                                Filter(
+                                    respuestasBot,
+                                    CountRows(
+                                        Filter(
+                                            Split(PalabrasClave, ","),
+                                            Lower(Trim(Value)) in Lower(ThisItem.Texto)
+                                        )
+                                    ) > 0
+                                ),
+                                Orden,
+                                SortOrder.Ascending
+                            )
+                        )
+                    );
+
+                    // 3. Agrega la respuesta del bot
+                    Collect(
+                        colConversacion,
+                        {
+                            Mensaje: If(!IsBlank(varRespuesta), varRespuesta.Respuesta, "No entendí tu pregunta 🤔 ¿puedes reformularla?"),
+                            Emisor: "Bot"
+                        }
+                    );
+
+                    // 4. Oculta las opciones rápidas mientras el usuario conversa
+                    Set(varMostrarOpciones, false)
+                  PressedBorderColor: =Self.Fill
+                  PressedColor: =Self.Fill
+                  PressedFill: =Self.Color
+                  Size: =20
+                  Text: =ThisItem.Texto
+                  Width: =320
+                  Y: =12
+      - galConversacion:
+          Control: Gallery@2.15.0
+          Variant: BrowseLayout_Flexible_SocialFeed_ver5.0
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Default: =varLast
+            DisplayMode: =DisplayMode.View
+            Height: =If(varMostrarOpciones || varEscribiendo, 850, 935)
+            Items: =colConversacion
+            TemplateSize: =133
+            Y: =97
+          Children:
+            - lbl_message:
+                Control: Label@2.5.1
+                Properties:
+                  AutoHeight: =true
+                  BorderColor: =RGBA(0, 18, 107, 1)
+                  Color: =If(ThisItem.Emisor = "Usuario", RGBA(255, 255, 255, 1), RGBA(0, 0, 0, 1))
+                  Fill: =If(ThisItem.Emisor = "Usuario", RGBA(22, 74, 65, 100), RGBA(230, 230, 230, 100))
+                  Font: =Font.'Open Sans'
+                  Height: =89
+                  Size: =23
+                  Text: =ThisItem.Mensaje
+                  Width: =446
+                  X: =If(ThisItem.Emisor = "Usuario", Parent.Width - Self.Width - 20, 20)
+                  Y: =20
+      - Rectangle3:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Fill: =RGBA(22, 74, 65, 100)
+            Height: =97
+            Width: =640
+      - lbl_eva:
+          Control: Label@2.5.1
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Color: =RGBA(255, 255, 255, 1)
+            Font: =Font.'Open Sans'
+            Height: =84
+            Size: =28
+            Text: ="EVA Assistant"
+            Width: =350
+            X: =101
+            Y: =6
+      - tmr_escribiendo:
+          Control: Timer@2.1.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledBorderColor: =ColorFade(Self.BorderColor, 70%)
+            DisabledColor: =ColorFade(Self.Fill, 90%)
+            DisabledFill: =ColorFade(Self.Fill, 70%)
+            Duration: =1200
+            Fill: =RGBA(56, 96, 178, 1)
+            Font: =Font.'Open Sans'
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            OnTimerEnd: |-
+              =With(
+                  {
+                      _msg: Lower(
+                          Substitute(Substitute(Substitute(Substitute(Substitute(
+                              varUltimoMensaje,
+                              "á", "a"), "é", "e"), "í", "i"), "ó", "o"), "ú", "u")
+                      )
+                  },
+                  ClearCollect(
+                      colPuntajes,
+                      AddColumns(
+                          respuestasBot,
+                          Puntaje,
+                          CountRows(
+                              Filter(
+                                  Split(PalabrasClave, ","),
+                                  Lower(Trim(Value)) in _msg
+                              )
+                          )
+                      )
+                  )
+              );
+
+
+              If(
+                  CountRows(Filter(colPuntajes, Puntaje > 0)) = 0,
+
+                  Set(varRespuesta, Blank());
+
+                  Collect(
+                      colConversacion,
+                      {
+                          IdMensaje: GUID(),
+                          Mensaje: "No entendí tu pregunta 🤔 ¿puedes reformularla?",
+                          Emisor: "Bot"
+                      }
+                  ),
+
+                  Set(
+                      varRespuesta,
+                      First(
+                          SortByColumns(
+                              Filter(colPuntajes, Puntaje > 0),
+                              "Puntaje",
+                              SortOrder.Descending
+                          )
+                      )
+                  ),
+
+                  Collect(
+                      colConversacion,
+                      {
+                          IdMensaje: GUID(),
+                          Mensaje: varRespuesta.Respuesta,
+                          Emisor: "Bot"
+                      }
+                  )
+              );
+
+              Set(varLast, Last(colConversacion));
+              Set(varEscribiendo, false);
+              Set(varStatus, false);
+              If(
+                  IsBlank(varRespuesta) ||
+                  varRespuesta.Title = "Agradecimiento" ||
+                  varRespuesta.Title = "Despedida",
+                  Set(varMostrarOpciones, true),
+                  Set(varMostrarOpciones, false)
+              )
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =Self.Color
+            Start: =varEscribiendo
+            Visible: =false
+            X: =360
+            Y: =877
+      - tmr_puntitos:
+          Control: Timer@2.1.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledBorderColor: =ColorFade(Self.BorderColor, 70%)
+            DisabledColor: =ColorFade(Self.Fill, 90%)
+            DisabledFill: =ColorFade(Self.Fill, 70%)
+            Duration: =400
+            Fill: =RGBA(56, 96, 178, 1)
+            Font: =Font.'Open Sans'
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            OnTimerEnd: =Set(varPuntitos, Mod(varPuntitos, 3) + 1)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =Self.Color
+            Repeat: =true
+            Start: =varEscribiendo
+            Visible: =false
+            X: =360
+            Y: =807
+      - thinking:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            Color: =RGBA(0, 0, 0, 1)
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            DisplayMode: =DisplayMode.View
+            Fill: =RGBA(230, 230, 230, 100)
+            Font: =Font.'Open Sans'
+            Height: =66
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(RGBA(56, 96, 178, 1), -20%)
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =Self.Color
+            RadiusBottomLeft: =18
+            RadiusBottomRight: =18
+            RadiusTopLeft: =18
+            RadiusTopRight: =18
+            Text: |-
+              =Switch(
+                  varPuntitos,
+                  1, ".",
+                  2, "..",
+                  3, "...",
+                  ""
+              )
+            Visible: =If(varStatus, true, false)
+            Width: =159
+            X: =25
+            Y: =966
+      - Image2:
+          Control: Image@2.2.3
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Height: =84
+            Image: =chat_2
+            Width: =93
+            Y: =6
+      - btn_go_home:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledFill: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Font.'Open Sans'
+            Height: =77
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =
+            OnSelect: =Back()
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: |+
+              =
+            Text: =
+            Width: =305
+            Y: =13
+      - btnEnviar:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorFade(Self.Fill, -15%)
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledBorderColor: =RGBA(166, 166, 166, 1)
+            Fill: =RGBA(22, 74, 65, 100)
+            Font: =Font.'Open Sans'
+            Height: =60
+            HoverBorderColor: =ColorFade(Self.BorderColor, 20%)
+            HoverColor: =RGBA(255, 255, 255, 1)
+            HoverFill: =ColorFade(RGBA(22, 74, 65, 1), -20%)
+            OnSelect: "=// Mensaje del usuario\r\nSet(varUltimoMensaje, txtMensaje.Text);\r\nCollect(colConversacion, {\r\n    IdMensaje: GUID(), Mensaje: varUltimoMensaje, Emisor: \"Usuario\"\r\n    });\r\n    \r\nSet(varLast, Last(colConversacion));\r\nSet(varPuntitos, 1);\r\nSet(varMostrarOpciones, false);\r\nSet(varStatus, true);\r\nSet(varEscribiendo, true);\r\nReset(txtMensaje);"
+            PressedBorderColor: =Self.Fill
+            PressedColor: =Self.Fill
+            PressedFill: =Self.Color
+            Text: ="Send"
+            Width: =147
+            X: =464
+            Y: =1049
+      - txtMensaje:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =RGBA(0, 18, 107, 1)
+            Default: =""
+            Font: =Font.'Open Sans'
+            Height: =60
+            HintText: ="Type your question!"
+            HoverBorderColor: =
+            HoverColor: =
+            HoverFill: =
+            Width: =405
+            X: =25
+            Y: =1049

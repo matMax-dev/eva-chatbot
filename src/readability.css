@@ -1,0 +1,7 @@
+/* Classroom reading: keep explanations and controls comfortably legible. */
+.intro-grid p,.concepts p,.flow li,.note,.muted,.quick-list>div{font-size:1rem}
+.concepts code,.code-heading,.code-heading button,.property,.jump select,nav a{font-size:.875rem}
+.badge,.code-footer .badge,.breadcrumb,.breadcrumb code,.speaker,.chat-caption,.chat-head small{font-size:.75rem}
+.sidebar-label,.top-tag,.eyebrow,.sidebar-bottom>div,.page-foot,.lesson-footer small,.code-footer>span{font-size:.75rem}
+.sidebar{overflow-y:auto}
+@media(max-width:560px){.lesson-meta{align-items:flex-start;flex-wrap:wrap}.code-footer{flex-wrap:wrap}.code-footer>span,.badge{font-size:.75rem}.quick-list span{display:block;margin-bottom:6px}}
