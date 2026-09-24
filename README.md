@@ -36,6 +36,10 @@ npm run preview
 
 El resultado en `dist/` es estático. `base: './'` permite servirlo bajo un nombre de repositorio; las seis lecciones usan fragmentos `#1` a `#6` y no requieren redirecciones del servidor.
 
-Se incluye `.github/workflows/pages.yml` para despliegue manual desde Actions. Cuando este proyecto esté en un repositorio de GitHub, selecciona **Settings → Pages → Source: GitHub Actions** y ejecuta **Publicar guía EVA** desde la rama que contiene el proyecto. No se ha publicado ni creado un repositorio automáticamente.
+Repositorio público: https://github.com/matMax-dev/eva-chatbot
+
+Sitio: https://matmax-dev.github.io/eva-chatbot/
+
+GitHub Pages usa GitHub Actions. El flujo `.github/workflows/pages.yml` prueba, compila y publica automáticamente cada actualización de `main`. También puede ejecutarse manualmente con **Publicar guía EVA** desde Actions.
 
 Las fuentes de Google son opcionales: si no hay red se usan las fuentes del sistema. Para copiar mediante Clipboard API, sirve el sitio por HTTPS o localhost. No abras `dist/index.html` mediante `file://`; usa un servidor estático.
